@@ -11,14 +11,17 @@ import android.view.LayoutInflater
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.android.example.cardscannerapp.base.BaseActivity
 import com.android.example.cardscannerapp.databinding.ActivityMainBinding
 import com.android.example.cardscannerapp.util.showSnackbar
+import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -31,7 +34,8 @@ import java.util.concurrent.Executors
 
  */
 class MainActivity : BaseActivity<ActivityMainBinding>() {
-    private var imageCapture: ImageCapture? = null // Bu sınıf, kamera aracılığıyla fotoğraf çekme işlemini yönetir.
+    private var imageCapture: ImageCapture? =
+        null // Bu sınıf, kamera aracılığıyla fotoğraf çekme işlemini yönetir.
     private lateinit var cameraExecutor: ExecutorService
     private val activityResultLauncher =
         registerForActivityResult(
@@ -68,7 +72,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     }
 
-    private fun initEvents(){
+    private fun initEvents() {
         binding.imageCaptureButton.setOnClickListener(::takePhoto)
     }
 
@@ -80,10 +84,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
         val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
             .format(System.currentTimeMillis())
-        val  contentValues = ContentValues().apply {
+        val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P){
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
             }
         }
@@ -91,16 +95,18 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         // Create Output Options Object Which Contains File + Metadata
         // todo mediaStore kısmı, daha sonra araştır.
         val outputOptions = ImageCapture.OutputFileOptions
-            .Builder(contentResolver,
+            .Builder(
+                contentResolver,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                contentValues)
+                contentValues
+            )
             .build()
 
         // Set Up Image Capture Listener, Which Is Triggered After Photo Has Been Taken
         imageCapture.takePicture(
             outputOptions,
             ContextCompat.getMainExecutor(this@MainActivity),
-            object : ImageCapture.OnImageSavedCallback{
+            object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     val msg = "Photo capture succeeded: ${outputFileResults.savedUri}"
                     binding.main.showSnackbar(msg)
@@ -125,7 +131,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         // Parameters:
         //listener - the listener to run when the computation is complete
         //executor - the executor to run the listener in
-        cameraProviderFuture.addListener(Runnable{
+        cameraProviderFuture.addListener(Runnable {
             // Used to Bind the Lifecycle of Cameras to the Lifecycle Owner
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
@@ -140,6 +146,15 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             // Preview gibi, imageCapture'yi build ediyoruz ve aşağıda bindlifecycle ile bağlayacağız
             imageCapture = ImageCapture.Builder().build()
 
+            // Preview ve imageCapture gibi, imageAnalyzer'ı build ediyoruz.
+            val imageAnalyzer = ImageAnalysis.Builder()
+                .build()
+                .also {
+                    it.setAnalyzer(cameraExecutor, LuminosityAnalyzer{
+                        luma ->
+                        Log.d(TAG, "Average luminosity: $luma")
+                    })
+                }
 
             // Select Back Camera As A Default
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -152,12 +167,13 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     this@MainActivity,
                     cameraSelector,
                     preview,
-                    imageCapture
+                    imageCapture,
+                    imageAnalyzer
                 )
-            }catch (ex:Exception){
+            } catch (ex: Exception) {
                 Log.e(TAG, "Use case binding failed", ex)
             }
-        },ContextCompat.getMainExecutor(this@MainActivity))
+        }, ContextCompat.getMainExecutor(this@MainActivity))
 
     }
 
@@ -202,4 +218,38 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         return ActivityMainBinding.inflate(inflater)
 
     }
+}
+
+/*
+        Image Analysis bir custom class oluşturacağız.
+*/
+
+// Define the LumaListener interface
+private fun interface LumaListener {
+    // todo  fonksiyonel interface nedir? araştır.
+     fun invoke(luma: Double)
+}
+
+private class LuminosityAnalyzer(private val listener:LumaListener): ImageAnalysis.Analyzer{
+
+    private fun ByteBuffer.toByteArray(): ByteArray{
+        rewind()  // Rewind the buffer to zero, Rewind -> geri sarma
+        val data = ByteArray(remaining())
+        get(data) // Copy the buffer into a byte array
+        return data // Return the byte array
+    }
+
+
+    override fun analyze(image: ImageProxy) {
+
+        val buffer = image.planes[0].buffer
+        val data = buffer.toByteArray()
+        val pixels = data.map { it.toInt() and 0xFF }
+        val luma = pixels.average()
+
+        listener.invoke(luma)
+
+        image.close()
+    }
+
 }
