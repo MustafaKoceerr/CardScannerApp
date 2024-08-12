@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.core.content.ContextCompat
 import com.android.example.cardscannerapp.base.BaseActivity
@@ -17,6 +19,26 @@ import java.util.concurrent.Executors
 class MainActivity : BaseActivity<ActivityMainBinding>() {
     private var imageCapture: ImageCapture? = null
     private lateinit var cameraExecutor: ExecutorService
+    private val activityResultLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            // handle permission granted/rejected
+            var permissionGranted = true
+            permissions.entries.forEach {
+                if (it.key in REQUIRED_PERMISSIONS && it.value == false)
+                    permissionGranted = false // eğer herhangi bir izin reddedilmişse false'a çevir
+            }
+            if (!permissionGranted) {
+                Toast.makeText(
+                    baseContext,
+                    "Permission request denied",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }else{
+                startCamera()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,7 +62,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
     private fun startCamera() {}
 
-    private fun requestPermissions() {}
+    private fun requestPermissions() {
+        activityResultLauncher.launch(REQUIRED_PERMISSIONS)
+    }
 
     private fun allPermissionGranted(): Boolean {
         return REQUIRED_PERMISSIONS.all {
@@ -56,7 +80,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         binding.imageCaptureButton.setOnClickListener(::takePhoto)
     }
 
-    private fun takePhoto(view:View){
+    private fun takePhoto(view: View) {
 
     }
 
