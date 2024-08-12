@@ -1,33 +1,37 @@
 package com.android.example.cardscannerapp
 
 import android.Manifest
-import android.content.Context
+import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.Button
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.android.example.cardscannerapp.base.BaseActivity
 import com.android.example.cardscannerapp.databinding.ActivityMainBinding
-import java.lang.Exception
+import com.android.example.cardscannerapp.util.showSnackbar
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /*
         Preview görmek için, bir preview nesnesini oluşturacağız, configuration edip build edeceğiz.
         Sonra CameraX lifecycle'ına bağlayacağız.
+        Diğer use case'ler de preview gibi çalışıyorlar, usecase'nin nesnesini oluşturuyorsun ve bindlifecycle'da bağlıyorsun.
+
  */
 class MainActivity : BaseActivity<ActivityMainBinding>() {
-    private var imageCapture: ImageCapture? = null
+    private var imageCapture: ImageCapture? = null // Bu sınıf, kamera aracılığıyla fotoğraf çekme işlemini yönetir.
     private lateinit var cameraExecutor: ExecutorService
     private val activityResultLauncher =
         registerForActivityResult(
@@ -40,11 +44,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                     permissionGranted = false // eğer herhangi bir izin reddedilmişse false'a çevir
             }
             if (!permissionGranted) {
-                Toast.makeText(
-                    baseContext,
-                    "Permission request denied",
-                    Toast.LENGTH_SHORT
-                ).show()
+                binding.main.showSnackbar("Permission request denied")
             } else {
                 startCamera()
             }
@@ -63,10 +63,57 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         // todo ne yaptığını araştır
+
+        initEvents()
+
     }
 
+    private fun initEvents(){
+        binding.imageCaptureButton.setOnClickListener(::takePhoto)
+    }
 
-    private fun takePhoto() {}
+    private fun takePhoto(view: View) {
+        // Get a Stable Reference of the Modifiable Image Capture Use Case
+        val imageCapture = imageCapture ?: return
+
+        // Create Time Stamped Name and MediaStore Entry.
+
+        val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
+            .format(System.currentTimeMillis())
+        val  contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P){
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
+            }
+        }
+
+        // Create Output Options Object Which Contains File + Metadata
+        // todo mediaStore kısmı, daha sonra araştır.
+        val outputOptions = ImageCapture.OutputFileOptions
+            .Builder(contentResolver,
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                contentValues)
+            .build()
+
+        // Set Up Image Capture Listener, Which Is Triggered After Photo Has Been Taken
+        imageCapture.takePicture(
+            outputOptions,
+            ContextCompat.getMainExecutor(this@MainActivity),
+            object : ImageCapture.OnImageSavedCallback{
+                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                    val msg = "Photo capture succeeded: ${outputFileResults.savedUri}"
+                    binding.main.showSnackbar(msg)
+                    Log.d(TAG, msg)
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    Log.e(TAG, "Photo capture failed: ${exception.message}", exception)
+                }
+
+            }
+        )
+    }
 
     private fun captureVideo() {}
 
@@ -90,6 +137,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 .also {
                     it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
                 }
+            // Preview gibi, imageCapture'yi build ediyoruz ve aşağıda bindlifecycle ile bağlayacağız
+            imageCapture = ImageCapture.Builder().build()
+
 
             // Select Back Camera As A Default
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -101,7 +151,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 cameraProvider.bindToLifecycle(
                     this@MainActivity,
                     cameraSelector,
-                    preview
+                    preview,
+                    imageCapture
                 )
             }catch (ex:Exception){
                 Log.e(TAG, "Use case binding failed", ex)
@@ -123,12 +174,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
                 baseContext, it
             ) == PackageManager.PERMISSION_GRANTED
         }
-
-        // Set up the listeners for take photo button
-        binding.imageCaptureButton.setOnClickListener(::takePhoto)
-    }
-
-    private fun takePhoto(view: View) {
 
     }
 
