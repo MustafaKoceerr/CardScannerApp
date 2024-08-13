@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">CardScannerApp</string>
-    <string name="take_photo">Take Photo</string>
-    <string name="start_capture">Start Capture</string>
-    <string name="stop_capture">Stop Capture</string>
+    <string name="scan_card">Scan Card</string>
+    <string name="cvc">CVC</string>
+    <string name="valid_thru">VALID THRU</string>
+    <string name="card_number">**** **** **** ****</string>
+    <string name="details_activity_title">Scanned Card</string>
 </resources>
