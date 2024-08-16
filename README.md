@@ -1,6 +1,5 @@
 # CardScanner 
 
-- This Project is a scanning project that automatically scans credit cards using MLKit and CameraX. 
 <p align="center">
 A card scanner app for credit cards.
 </p>
