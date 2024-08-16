@@ -14,6 +14,10 @@ import com.android.example.cardscannerapp.CreditCardDetailsContants.CARD_NUMBER
 import com.android.example.cardscannerapp.CreditCardDetailsContants.CVC_NUMBER
 import com.android.example.cardscannerapp.CreditCardDetailsContants.VALID_MONTH
 import com.android.example.cardscannerapp.CreditCardDetailsContants.VALID_YEAR
+import com.android.example.cardscannerapp.CreditCardDetailsContants.CARD_LENGTH
+import com.android.example.cardscannerapp.CreditCardDetailsContants.CVC_LENGTH
+import com.android.example.cardscannerapp.CreditCardDetailsContants.VALID_MONTH_LENGTH
+import com.android.example.cardscannerapp.CreditCardDetailsContants.VALID_YEAR_LENGTH
 
 class CreditCardDetailsActivity : BaseActivity<ActivityCreditCardDetailsBinding>() {
 
@@ -59,21 +63,21 @@ class CreditCardDetailsActivity : BaseActivity<ActivityCreditCardDetailsBinding>
         val editTextLengthList = getEditTextLengthList()
 
         with(binding) {
-            if (editTextLengthList[CARD_NUMBER] == 19) {
+            if (editTextLengthList[CARD_NUMBER] == CARD_LENGTH) {
                 textViewCardNumber.text = editTextCardNumber.text.toString()
                 editTextCardNumber.setText("")
             }
-            if (editTextLengthList[CVC_NUMBER] == 3) {
+            if (editTextLengthList[CVC_NUMBER] == CVC_LENGTH) {
                 textViewCvcNumber.text = "CVC: ${editTextCvcNumber.text}"
                 editTextCvcNumber.setText("")
             }
-            if (editTextLengthList[VALID_MONTH] == 2) {
+            if (editTextLengthList[VALID_MONTH] == VALID_MONTH_LENGTH) {
                 // index 12 ve 13
                 val takeLastThree = textViewValidDate.text.toString().takeLast(3)
                 textViewValidDate.text = "VALID THRU: ${editTextValidMonth.text}$takeLastThree" +
                         editTextValidMonth.setText("")
             }
-            if (editTextLengthList[CreditCardDetailsContants.VALID_YEAR] == 2) {
+            if (editTextLengthList[CreditCardDetailsContants.VALID_YEAR] == VALID_YEAR_LENGTH) {
                 val takeFirstFiftheen = textViewValidDate.text.toString().substring(0, 15)
                 textViewValidDate.text = takeFirstFiftheen + editTextValidYear.text.toString()
                 editTextValidYear.setText("")
@@ -97,10 +101,10 @@ class CreditCardDetailsActivity : BaseActivity<ActivityCreditCardDetailsBinding>
         val editTextLenghtList = getEditTextLengthList()
         with(binding.btnUpdate) {
             isEnabled = (
-                    editTextLenghtList[CARD_NUMBER] == 19 ||
-                            editTextLenghtList[CVC_NUMBER] == 3 ||
-                            editTextLenghtList[VALID_MONTH] == 2 ||
-                            editTextLenghtList[VALID_YEAR] == 2
+                    editTextLenghtList[CARD_NUMBER] == CARD_LENGTH ||
+                            editTextLenghtList[CVC_NUMBER] == CVC_LENGTH ||
+                            editTextLenghtList[VALID_MONTH] == VALID_MONTH_LENGTH ||
+                            editTextLenghtList[VALID_YEAR] == VALID_YEAR_LENGTH
                     )
             alpha = if (isEnabled) 1F else 0.65F
 
@@ -122,19 +126,19 @@ class CreditCardDetailsActivity : BaseActivity<ActivityCreditCardDetailsBinding>
                 with(binding) {
                     when (editText) {
                         editTextCvcNumber -> {
-                            if (editTextLengthList[CVC_NUMBER] == 3) {
+                            if (editTextLengthList[CVC_NUMBER] == CVC_LENGTH) {
                                 hideKeyboard(this@CreditCardDetailsActivity, editTextCvcNumber)
                             }
                         }
 
                         editTextValidMonth -> {
-                            if (editTextLengthList[VALID_MONTH] == 2) {
+                            if (editTextLengthList[VALID_MONTH] == VALID_MONTH_LENGTH) {
                                 hideKeyboard(this@CreditCardDetailsActivity, editTextValidMonth)
                             }
                         }
 
                         editTextValidYear -> {
-                            if (editTextLengthList[VALID_YEAR] == 2) {
+                            if (editTextLengthList[VALID_YEAR] == VALID_YEAR_LENGTH) {
                                 hideKeyboard(this@CreditCardDetailsActivity, editTextValidYear)
                             }
                         }
@@ -158,7 +162,7 @@ class CreditCardDetailsActivity : BaseActivity<ActivityCreditCardDetailsBinding>
                             }
                             isFormatting = false
 
-                            if (editTextLengthList[CARD_NUMBER] == 19) {
+                            if (editTextLengthList[CARD_NUMBER] == CARD_LENGTH) {
                                 hideKeyboard(this@CreditCardDetailsActivity, editTextCardNumber)
                             }
                         }
