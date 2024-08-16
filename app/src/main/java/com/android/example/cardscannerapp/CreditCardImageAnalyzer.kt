@@ -1,7 +1,5 @@
 package com.android.example.cardscannerapp
 
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
@@ -15,7 +13,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 class CreditCardImageAnalyzer(private val listener: AnalysisListener) : ImageAnalysis.Analyzer {
 
     private val rateLimiter = RateLimiter(500L) // yarim saniye aralikla analiz yapacak
-    // todo timer ekle
+
     @OptIn(ExperimentalGetImage::class)
     override fun analyze(image: ImageProxy) {
         if (image.image != null && rateLimiter.shouldProceed()) {
@@ -41,8 +39,6 @@ class CreditCardImageAnalyzer(private val listener: AnalysisListener) : ImageAna
         } else {
             image.close()
         }
-
     }
-
 
 }

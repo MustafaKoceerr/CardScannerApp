@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -245,7 +244,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(), AnalysisListener { // 
 
     override fun onAnalysisComleted(result: String) {
         // bana okunan text'i verdi. şimdi bunu işlemem gerek.
-        Log.i(TAG, "analiz ediliyor text: $result")
+//        Log.i(TAG, "analiz ediliyor text: $result")
         if (result.isNotEmpty()) {
             val cardInfo = extractCardInfo(result)
             if (cardInfo == null) {
