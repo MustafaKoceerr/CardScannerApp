@@ -1,8 +1,6 @@
 # CardScanner 
 
-<p align="center">
 A card scanner app for credit cards.
-</p>
 
 ## GIF
 <p align="center">
