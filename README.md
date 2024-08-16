@@ -11,8 +11,8 @@ A card scanner app for credit cards.
 
 ## Images
 <p align="center">
-    <img src="Screens/cardScannerScanning.jpg" alt="When scanning a card" width="45%" height="400px"/>
-    <img src="Screens/PaycellCard.jpg" alt="After the card is scanned" width="45%" height="400px"/>
+    <img src="Screens/cardScannerScanning.jpg" alt="When scanning a card" height="400px"/>
+    <img src="Screens/PaycellCard.jpg" alt="After the card is scanned"  height="400px"/>
 </p>
 
 
