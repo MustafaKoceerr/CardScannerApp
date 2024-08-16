@@ -3,8 +3,8 @@
 A card scanner app for credit cards.
 
 ## 	:book: Description :
-- Bu uygulama, ML Kit ile kart taraması yapmanızı sağlayan bir uygulamadır.
-- Kartlarınızı kolayca tarayıp ardından düzenleyebilirsiniz
+- This application is designed to allow card scanning using MLKit.
+- You can easily scan your cards and then edit them.
 
   </br>
 
@@ -23,6 +23,11 @@ A card scanner app for credit cards.
 
 </br>
 
-- Bu uygulama MLKit'in Text Recognition v2 kütüphanesi kullanarak yapıldı.  [MLKit](https://developers.google.com/ml-kit/vision/text-recognition/v2)
-- Ayrıca, kamera kullanımında CameraX kütüphanesinden yararlanıldı. [CameraX](https://developer.android.com/media/camera/camerax)
+- This application was developed using ML Kit's Text Recognition v2 library. [MLKit](https://developers.google.com/ml-kit/vision/text-recognition/v2)
+- Additionally, the CameraX library was utilized for camera functionality. [CameraX](https://developer.android.com/media/camera/camerax)
 
+</br>
+
+  ##  :hammer_and_wrench: Features Under Development: 
+  - Front and back scanning will be added for cards with the card number on the front and the CVC on the back.
+  - The layout of the scanning screen will be improved.
