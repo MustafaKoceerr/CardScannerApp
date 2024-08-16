@@ -8,11 +8,9 @@ import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -20,10 +18,7 @@ import androidx.core.content.ContextCompat
 import com.android.example.cardscannerapp.base.BaseActivity
 import com.android.example.cardscannerapp.databinding.ActivityMainBinding
 import com.android.example.cardscannerapp.util.showSnackbar
-import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
@@ -34,9 +29,16 @@ import java.util.regex.Pattern
         Diğer use case'ler de preview gibi çalışıyorlar, usecase'nin nesnesini oluşturuyorsun ve bindlifecycle'da bağlıyorsun.
 
  */
-class MainActivity : BaseActivity<ActivityMainBinding>() {
+class MainActivity : BaseActivity<ActivityMainBinding>(), AnalysisListener { // END OF MAIN ACTIVITY
     private var imageCapture: ImageCapture? =
         null // Bu sınıf, kamera aracılığıyla fotoğraf çekme işlemini yönetir.
+
+    private val imageAnalyzer = ImageAnalysis.Builder()
+        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+        .build()
+    private lateinit var cameraProvider: ProcessCameraProvider
+    private lateinit var preview: Preview
+
     private lateinit var cameraExecutor: ExecutorService
     private val activityResultLauncher =
         registerForActivityResult(
@@ -58,95 +60,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Request Camera Permission
+        // Request Camera Permissions
         if (allPermissionGranted()) {
             startCamera()
         } else {
             requestPermissions()
         }
 
-
         cameraExecutor = Executors.newSingleThreadExecutor()
         // todo ne yaptığını araştır
-
-        initEvents()
-
     }
 
-    private fun initEvents() {
-        binding.imageCaptureButton.setOnClickListener {
-            with(binding.imageCaptureButton) {
-                isEnabled = false
-                alpha = 0.9f
-            }
-            takePhotoAndAnalyzeCard()
-        }
-    }
-
-    private fun takePhotoAndAnalyzeCard() {
-        // Get a Stable Reference of the Modifiable Image Capture Use Case
-        val imageCapture = imageCapture ?: return
-
-        /* Diske kaydetmeyeceğim, MediaImage'de bellek(RAM) üzerinde işleyeceğim için bu yöntem iptal edildi.
-
-              // Create Time Stamped Name and MediaStore Entry.
-              val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
-                  .format(System.currentTimeMillis())
-              val contentValues = ContentValues().apply {
-                  put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-                  put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                  if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                      put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
-                  }
-              }
-
-              // Create Output Options Object Which Contains File + Metadata
-              // todo mediaStore kısmı, daha sonra araştır.
-              val outputOptions = ImageCapture.OutputFileOptions
-                  .Builder(
-                      contentResolver,
-                      MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                      contentValues
-                  )
-                  .build()
-
-              // Set Up Image Capture Listener, Which Is Triggered After Photo Has Been Taken
-              imageCapture.takePicture(
-                  outputOptions,
-                  ContextCompat.getMainExecutor(this@MainActivity),
-                  object : ImageCapture.OnImageSavedCallback {
-                      override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                          val msg = "Photo capture succeeded: ${outputFileResults.savedUri}"
-                          binding.main.showSnackbar(msg)
-                          Log.d(TAG, msg)
-                      }
-
-                      override fun onError(exception: ImageCaptureException) {
-                          Log.e(TAG, "Photo capture failed: ${exception.message}", exception)
-                      }
-
-                  }
-              )
-         */
-
-        imageCapture.takePicture(
-            ContextCompat.getMainExecutor(this@MainActivity),
-            object : ImageCapture.OnImageCapturedCallback() {
-                @ExperimentalGetImage
-                override fun onCaptureSuccess(image: ImageProxy) {
-                    super.onCaptureSuccess(image)
-                    val mediaImage = image.image
-                    mediaImage?.let {
-                        val inputImage =
-                            InputImage.fromMediaImage(mediaImage, image.imageInfo.rotationDegrees)
-                        analyzeImage(inputImage)
-                    }
-                    image.close() // bellekte yer açmak için image close yapmalısın.
-                    // yoksa çektiğin fotoğraflar memory'de kalıp, bellek tüketmeye devam ederler ve en sonunda patlarsın.
-                }
-            }
-        )
-    }
 
     private fun extractCardInfo(text: String): Map<String, String?>? {
         val cardInfo = mutableMapOf<String, String?>()
@@ -170,10 +94,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             cardInfo["expiryDate"] = expiryDateMatcher.group()
         }
 
-        println("Card Number: ${cardInfo["cardNumber"]}")
-        println("CVC: ${cardInfo["cvc"]}")
-        println("Expiry Date: ${cardInfo["expiryDate"]}")
-        if (cardInfo["cardNumber"]==null){
+        if (cardInfo["cardNumber"] == null || cardInfo["expiryDate"] == null) {
             return null
         }
         return cardInfo
@@ -188,44 +109,18 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
     }
 
     private fun goToSecondActivity(cardInfo: Map<String, String?>) {
-            val bundle = Bundle()
-            for ((key, value) in cardInfo) {
-                bundle.putString(key, value)
-            }
-            Intent(this, CreditCardDetailsActivity::class.java).also {
-                it.putExtra("mapBundle", bundle)
-                startActivity(it)
-            }
+        val bundle = Bundle()
+        for ((key, value) in cardInfo) {
+            bundle.putString(key, value)
+        }
+        Intent(this, CreditCardDetailsActivity::class.java).also {
+            it.putExtra("mapBundle", bundle)
+            startActivity(it)
+
+        }
+
     }
 
-    private fun analyzeImage(image: InputImage) {
-        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-
-        recognizer.process(image)
-            .addOnSuccessListener { visionText ->
-                val resultStrings = processRecognizedText(visionText)
-                resultStrings?.let {
-                    Log.e(TAG, it)
-                    val cardInfo = extractCardInfo(it)
-                    if (cardInfo==null){
-                        binding.main.showSnackbar("Card cant read. Please try again!")
-                    }else{
-                        goToSecondActivity(cardInfo)
-                    }
-                }
-            }
-            .addOnFailureListener { e ->
-                val errorMessage = "Text recognition failed"
-                Log.e(TAG, errorMessage, e)
-                binding.main.showSnackbar(errorMessage)
-            }
-            .addOnCompleteListener {
-                with(binding.imageCaptureButton) {
-                    isEnabled = true
-                    alpha = 1.0f
-                }
-            }
-    }
 
     private fun processRecognizedText(visionText: Text): String? {
         if (visionText.textBlocks.isEmpty()) {
@@ -258,43 +153,47 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         //executor - the executor to run the listener in
         cameraProviderFuture.addListener(Runnable {
             // Used to Bind the Lifecycle of Cameras to the Lifecycle Owner
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+            cameraProvider = cameraProviderFuture.get()
 
             // Preview (On izleme)
             // burada nesnemizi build ediyoruz sonra CameraX lifecycle'ına bağlayacağız.
             // Build ederken configration'larını değiştirebiliriz, also ile de xml'imize bağladık.
-            binding.viewFinder.scaleType = PreviewView.ScaleType.FILL_START
-            val preview = Preview.Builder()
+            binding.viewFinder.scaleType = PreviewView.ScaleType.FILL_CENTER
+            preview = Preview.Builder()
                 .build()
                 .also {
                     it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
                 }
             // Preview gibi, imageCapture'yi build ediyoruz ve aşağıda bindlifecycle ile bağlayacağız
-            imageCapture = ImageCapture.Builder().build()
+            //imageCapture = ImageCapture.Builder().build()
+
+            // ImageAnalysis
+            imageAnalyzer.setAnalyzer(cameraExecutor, CreditCardImageAnalyzer(this@MainActivity))
 
 
-            // Select Back Camera As A Default
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
-                // Unbind Use Cases Before Rebinding
-                cameraProvider.unbindAll()
-                // Bind Use Cases to Camera
-                cameraProvider.bindToLifecycle(
-                    this@MainActivity,
-                    cameraSelector,
-                    preview,
-                    imageCapture,
-                )
-
-
+                bindCamera()
             } catch (ex: Exception) {
                 Log.e(TAG, "Use case binding failed", ex)
             }
         }, ContextCompat.getMainExecutor(this@MainActivity))
-
     }
 
+    private fun bindCamera(){
+        // Select Back Camera As A Default
+        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+        // Unbind Use Cases Before Rebinding
+        cameraProvider.unbindAll()
+        // Bind Use Cases to Camera
+        cameraProvider.bindToLifecycle(
+            this@MainActivity,
+            cameraSelector,
+            preview,
+            imageAnalyzer,
+
+        )
+    }
 
     private fun requestPermissions() {
         activityResultLauncher.launch(REQUIRED_PERMISSIONS)
@@ -310,6 +209,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
             ) == PackageManager.PERMISSION_GRANTED
         }
 
+    }
+
+    override fun onResume() {
+        super.onResume()
+        imageAnalyzer.setAnalyzer(cameraExecutor, CreditCardImageAnalyzer(this@MainActivity))
     }
 
     override fun onDestroy() {
@@ -333,9 +237,25 @@ class MainActivity : BaseActivity<ActivityMainBinding>() {
         // yani java ArrayList'i olur, performanssız çalışır ama parametre olarak bunu istediği için dönüştürdük.
     }
 
+
     override fun getActivityViewBinding(inflater: LayoutInflater): ActivityMainBinding {
         return ActivityMainBinding.inflate(inflater)
-
     }
+
+    override fun onAnalysisComleted(result: String) {
+        // bana okunan text'i verdi. şimdi bunu işlemem gerek.
+//        Log.i(TAG, "analiz ediliyor text: $result")
+        if (result.isNotEmpty()) {
+            val cardInfo = extractCardInfo(result)
+            if (cardInfo == null) {
+                binding.main.showSnackbar("Card can't be read. Please try again!")
+            } else {
+                imageAnalyzer.clearAnalyzer()
+                goToSecondActivity(cardInfo)
+                // todo preview'i unbind etmediğim için hata veriyor.
+            }
+        }
+    }
+
 }
 

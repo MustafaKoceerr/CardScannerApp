@@ -5,4 +5,10 @@
     <string name="valid_thru">VALID THRU</string>
     <string name="card_number">**** **** **** ****</string>
     <string name="details_activity_title">Scanned Card</string>
+    <string name="main_activity_title">Scan Your Card</string>
+    <string name="edit_card_number">Edit card number</string>
+    <string name="edit_cvc_number">Edit cvc number</string>
+    <string name="edit_valid_month">Edit valid month</string>
+    <string name="edit_valid_year">Edit valid year</string>
+    <string name="update_card">Update Card</string>
 </resources>
