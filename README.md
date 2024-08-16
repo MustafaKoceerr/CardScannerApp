@@ -6,7 +6,7 @@ A card scanner app for credit cards.
 
 ## GIF
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/a1ba3d95-21a6-45ad-84d9-564034f83e4c" alt="Card Scanner App" />
+  <img src="https://github.com/user-attachments/assets/a1ba3d95-21a6-45ad-84d9-564034f83e4c" alt="Card Scanner App" width="50%" />
 </p>
 
 ## Images
